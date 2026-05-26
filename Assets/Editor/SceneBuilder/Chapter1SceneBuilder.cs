@@ -312,15 +312,16 @@ namespace GanhHangRong.Editor
             hudObj.AddComponent<CanvasGroup>();
             var gameplayHUD = hudObj.AddComponent<GameplayHUD>(); 
             
-            // Tải Sprites (từ ảnh mockup đã crop)
+            // Tải Sprites
             Sprite sprAvatarBoard = LoadSprite("Assets/_Project/Art/UI/Items/khung_avatar.png");
             Sprite sprPriceTag = LoadSprite("Assets/_Project/Art/UI/Items/the_gia.png");
             Sprite sprCompass = LoadSprite("Assets/_Project/Art/UI/Items/dong_ho.png");
             Sprite sprCounter = LoadSprite("Assets/_Project/Art/UI/Items/mat_ban_inox.png");
-            Sprite sprTea = LoadSprite("Assets/_Project/Art/UI/Items/hu_tra.png");
-            Sprite sprSugar = LoadSprite("Assets/_Project/Art/UI/Items/hu_duong.png");
-            Sprite sprCup = LoadSprite("Assets/_Project/Art/UI/Items/ly_cups.png");
-            Sprite sprIce = LoadSprite("Assets/_Project/Art/UI/Items/ice_box.png");
+            // Dùng icon đã crop để tránh dính chữ/giá mẫu từ mockup
+            Sprite sprTea = LoadSprite("Assets/_Project/Art/UI/Cropped/small_4.png");
+            Sprite sprSugar = LoadSprite("Assets/_Project/Art/UI/Cropped/small_3.png");
+            Sprite sprCup = LoadSprite("Assets/_Project/Art/UI/Cropped/small_2.png");
+            Sprite sprIce = LoadSprite("Assets/_Project/Art/UI/Cropped/small_1.png");
 
             // 1. Top Left - Avatar & Stats
             GameObject topLeftPanel = new GameObject("TopLeftPanel");
