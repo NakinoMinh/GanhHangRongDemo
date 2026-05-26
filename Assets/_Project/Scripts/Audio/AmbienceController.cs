@@ -1,5 +1,6 @@
 using UnityEngine;
 using GanhHangRong.Core;
+using GanhHangRong.Weather;
 using System.Collections.Generic;
 
 namespace GanhHangRong.Audio

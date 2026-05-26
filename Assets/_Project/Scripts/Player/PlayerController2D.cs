@@ -19,7 +19,6 @@ namespace GanhHangRong.Player
         [Header("Tương Tác")]
         [SerializeField] private float interactionRange = 1.5f;
         [SerializeField] private LayerMask interactableLayer;
-        [SerializeField] private KeyCode interactKey = KeyCode.E;
 
         [Header("Ground Check")]
         [SerializeField] private Transform groundCheck;

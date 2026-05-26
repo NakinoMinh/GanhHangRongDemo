@@ -59,6 +59,10 @@ namespace GanhHangRong.Core
         public static void TriggerFatigueChanged(float f) => OnFatigueChanged?.Invoke(f);
         public static void TriggerIceLevelChanged(float i) => OnIceLevelChanged?.Invoke(i);
 
+        // STRESS
+        public static event Action<float> OnStressChanged;
+        public static void TriggerStressChanged(float s) => OnStressChanged?.Invoke(s);
+
         // ĐỐI THOẠI
         public static event Action OnDialogueStarted;
         public static event Action OnDialogueEnded;
@@ -88,6 +92,7 @@ namespace GanhHangRong.Core
             OnCustomerArrived = null; OnCustomerServed = null;
             OnCustomerLeftHappy = null; OnCustomerLeftSad = null;
             OnPlayerStateChanged = null; OnFatigueChanged = null; OnIceLevelChanged = null;
+            OnStressChanged = null;
             OnDialogueStarted = null; OnDialogueEnded = null; OnDialogueLine = null;
             OnEmotionalLevelChanged = null;
             OnInteractionPromptShow = null; OnInteractionPromptHide = null;

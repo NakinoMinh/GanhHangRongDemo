@@ -4,15 +4,17 @@ using GanhHangRong.Core;
 namespace GanhHangRong.Player
 {
     /// <summary>
-    /// Quản lý animation thủ tục cho nhân vật.
-    /// Dùng transform manipulation thay vì Animator (vì chưa có asset animator).
-    /// Khi có Animator thật, có thể chuyển sang dùng Animator.
+    /// Quản lý animation cho nhân vật.
+    /// Khi có Animator Controller 3D: Dùng Animator với smooth parameter transitions.
+    /// Khi không có: Procedural Animation (fallback).
     /// </summary>
     public class PlayerAnimator : MonoBehaviour
     {
-        [Header("Animation Settings")]
+        [Header("Procedural Animation Settings (Fallback)")]
         [SerializeField] private float walkBobSpeed = 8f;
         [SerializeField] private float walkBobAmount = 0.05f;
+        [SerializeField] private float runBobSpeed = 12f;
+        [SerializeField] private float runBobAmount = 0.07f;
         [SerializeField] private float idleSwaySpeed = 1.5f;
         [SerializeField] private float idleSwayAmount = 0.02f;
         [SerializeField] private float pushBobSpeed = 6f;
@@ -24,7 +26,13 @@ namespace GanhHangRong.Player
         private PlayerState currentState = PlayerState.Idle;
         private Vector3 originalPosition;
         private float animTimer;
-        private Animator animator; // Optional — dùng nếu có
+        private Animator animator;
+        private bool has3DAnimator = false;
+
+        // Smooth animation blending
+        private int currentAnimState = 0;
+        private float currentSpeed = 0f;
+        private float speedVelocity = 0f; // for SmoothDamp
 
         private void Start()
         {
@@ -38,22 +46,42 @@ namespace GanhHangRong.Player
 
             originalPosition = visualTransform.localPosition;
             animator = GetComponentInChildren<Animator>();
+            
+            // Kiểm tra xem có 3D Animator thật không
+            has3DAnimator = (animator != null && animator.runtimeAnimatorController != null);
         }
 
         private void Update()
         {
             animTimer += Time.deltaTime;
 
-            // Nếu có Animator thật, dùng nó
-            if (animator != null && animator.runtimeAnimatorController != null)
+            if (has3DAnimator)
             {
-                animator.SetInteger("State", (int)currentState);
-                // Nếu animation 3D chưa đủ (vd Push, Serve), 
-                // có thể kết hợp code procedural tại đây. Tạm thời return để test animation chuẩn.
-                return;
+                // === 3D ANIMATION MODE ===
+                int targetState = (int)currentState;
+                
+                // Smooth speed parameter (cho blend mượt)
+                float targetSpeed = 0f;
+                switch (currentState)
+                {
+                    case PlayerState.Idle: targetSpeed = 0f; break;
+                    case PlayerState.Walking: targetSpeed = 0.5f; break;
+                    case PlayerState.Running: targetSpeed = 1f; break;
+                    case PlayerState.PushingCart: targetSpeed = 0.3f; break;
+                    case PlayerState.Serving: targetSpeed = 0f; break;
+                    case PlayerState.Sitting: targetSpeed = 0f; break;
+                }
+                
+                currentSpeed = Mathf.SmoothDamp(currentSpeed, targetSpeed, ref speedVelocity, 0.1f);
+                
+                animator.SetInteger("State", targetState);
+                if (HasParameter("Speed"))
+                    animator.SetFloat("Speed", currentSpeed);
+                
+                return; // KHÔNG chạy procedural khi có 3D animator
             }
 
-            // Animation thủ tục
+            // === PROCEDURAL ANIMATION (Fallback) ===
             switch (currentState)
             {
                 case PlayerState.Idle:
@@ -61,6 +89,9 @@ namespace GanhHangRong.Player
                     break;
                 case PlayerState.Walking:
                     AnimateWalk();
+                    break;
+                case PlayerState.Running:
+                    AnimateRun();
                     break;
                 case PlayerState.PushingCart:
                     AnimatePushCart();
@@ -81,23 +112,37 @@ namespace GanhHangRong.Player
             animTimer = 0f;
         }
 
+        private bool HasParameter(string paramName)
+        {
+            if (animator == null) return false;
+            foreach (var param in animator.parameters)
+            {
+                if (param.name == paramName) return true;
+            }
+            return false;
+        }
+
+        // === PROCEDURAL ANIMATIONS (Fallback) ===
         private void AnimateIdle()
         {
-            // Đung đưa nhẹ khi đứng yên — tạo cảm giác sống động
             float sway = Mathf.Sin(animTimer * idleSwaySpeed) * idleSwayAmount;
             visualTransform.localPosition = originalPosition + new Vector3(0, sway, 0);
         }
 
         private void AnimateWalk()
         {
-            // Nhún nhảy khi đi bộ
-            float bob = Mathf.Abs(Mathf.Sin(animTimer * walkBobSpeed)) * walkBobAmount;
-            visualTransform.localPosition = originalPosition + new Vector3(0, bob, 0);
+            float bob = Mathf.Abs(Mathf.Sin(animTimer * walkBobSpeed)) * (walkBobAmount * 0.5f);
+            visualTransform.localPosition = Vector3.Lerp(visualTransform.localPosition, originalPosition + new Vector3(0, bob, 0), Time.deltaTime * 10f);
+        }
+
+        private void AnimateRun()
+        {
+            float bob = Mathf.Abs(Mathf.Sin(animTimer * runBobSpeed)) * (runBobAmount * 0.5f);
+            visualTransform.localPosition = Vector3.Lerp(visualTransform.localPosition, originalPosition + new Vector3(0, bob, 0), Time.deltaTime * 15f);
         }
 
         private void AnimatePushCart()
         {
-            // Nhún nhẹ hơn khi đẩy xe
             float bob = Mathf.Abs(Mathf.Sin(animTimer * pushBobSpeed)) * pushBobAmount;
             float lean = Mathf.Sin(animTimer * pushBobSpeed * 0.5f) * 2f;
             visualTransform.localPosition = originalPosition + new Vector3(0, bob, 0);
@@ -106,17 +151,16 @@ namespace GanhHangRong.Player
 
         private void AnimateServing()
         {
-            // Animation phục vụ — nghiêng nhẹ về phía trước
             float lean = Mathf.Sin(animTimer * 3f) * 3f;
             visualTransform.localRotation = Quaternion.Euler(0, 0, -5f + lean);
         }
 
         private void AnimateSitting()
         {
-            // Ngồi — hạ thấp nhẹ, thở nhẹ
             float breathe = Mathf.Sin(animTimer * 1f) * 0.01f;
             visualTransform.localPosition = originalPosition + new Vector3(0, -0.15f + breathe, 0);
             visualTransform.localRotation = Quaternion.identity;
         }
     }
 }
+

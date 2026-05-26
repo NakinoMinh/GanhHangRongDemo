@@ -12,7 +12,6 @@ namespace GanhHangRong.NPC
     public class NPCSpawner : MonoBehaviour
     {
         [Header("Settings")]
-        [SerializeField] private GameObject npcPrefab;
         [SerializeField] private Transform[] spawnPoints;
         [SerializeField] private Transform[] exitPoints;
         [SerializeField] private List<NPCProfile> availableProfiles;
@@ -46,6 +45,8 @@ namespace GanhHangRong.NPC
                 return;
 
             if (currentCustomerCount >= Constants.MAX_CONCURRENT_CUSTOMERS) return;
+            if (availableProfiles == null || availableProfiles.Count == 0) return;
+            if (spawnPoints == null || spawnPoints.Length == 0) return;
 
             spawnTimer += Time.deltaTime;
 
@@ -66,13 +67,13 @@ namespace GanhHangRong.NPC
             if (WeatherManager.HasInstance && WeatherManager.Instance.CurrentPreset != null)
             {
                 float modifier = WeatherManager.Instance.CurrentPreset.customerSpawnModifier;
-                if (modifier > 0) interval /= modifier; // Modifier nhỏ -> Interval lớn -> Ít khách
+                if (modifier > 0) interval /= modifier;
             }
 
-            // Emotional level ảnh hưởng (càng buồn/tuyệt vọng càng ít khách)
+            // Emotional level ảnh hưởng
             switch (GameManager.Instance.CurrentEmotionalLevel)
             {
-                case EmotionalLevel.Hopeful: interval *= 0.8f; break; // Spawn nhanh hơn
+                case EmotionalLevel.Hopeful: interval *= 0.8f; break;
                 case EmotionalLevel.Normal: break;
                 case EmotionalLevel.Struggling: interval *= 1.5f; break;
                 case EmotionalLevel.Lonely: interval *= 2.5f; break;
@@ -88,7 +89,6 @@ namespace GanhHangRong.NPC
             var allSeats = FindObjectsByType<CustomerSeat>(FindObjectsInactive.Exclude);
             CustomerSeat emptySeat = null;
             
-            // Shuffle nhẹ để lấy random ghế (tối ưu hóa sau)
             List<CustomerSeat> seatList = new List<CustomerSeat>(allSeats);
             for (int i = 0; i < seatList.Count; i++)
             {
@@ -107,10 +107,9 @@ namespace GanhHangRong.NPC
                 }
             }
 
-            if (emptySeat == null) return; // Hết chỗ
+            if (emptySeat == null) return;
 
-            // Spawn
-            emptySeat.OccupySeat(); // Book chỗ trước
+            emptySeat.OccupySeat();
 
             Transform spawnPoint = spawnPoints[Random.Range(0, spawnPoints.Length)];
             Transform exitPoint = exitPoints[Random.Range(0, exitPoints.Length)];
@@ -118,19 +117,13 @@ namespace GanhHangRong.NPC
             NPCProfile profile = availableProfiles[Random.Range(0, availableProfiles.Count)];
             float speed = Random.Range(Constants.NPC_WALK_SPEED_MIN, Constants.NPC_WALK_SPEED_MAX);
 
-            GameObject npcObj = Instantiate(npcPrefab, spawnPoint.position, Quaternion.identity);
-            NPCController controller = npcObj.GetComponent<NPCController>();
+            // Tạo NPC trực tiếp bằng code (không cần prefab)
+            GameObject npcObj = new GameObject($"NPC_{profile.npcType}");
+            npcObj.transform.position = spawnPoint.position;
             
-            if (controller != null)
-            {
-                controller.Initialize(profile, emptySeat, exitPoint, speed);
-                currentCustomerCount++;
-            }
-            else
-            {
-                emptySeat.FreeSeat();
-                Destroy(npcObj);
-            }
+            var controller = npcObj.AddComponent<NPCController>();
+            controller.Initialize(profile, emptySeat, exitPoint, speed);
+            currentCustomerCount++;
         }
 
         private void OnCustomerAdded(NPCType type) { }

@@ -2,6 +2,7 @@ using UnityEngine;
 using GanhHangRong.Core;
 using GanhHangRong.Interaction;
 using System.Collections;
+using TMPro;
 
 namespace GanhHangRong.NPC
 {
@@ -9,7 +10,6 @@ namespace GanhHangRong.NPC
     /// AI điều khiển một NPC khách hàng.
     /// Dùng State Machine đơn giản để mô phỏng hành vi.
     /// </summary>
-    [RequireComponent(typeof(NPCAppearance))]
     public class NPCController : MonoBehaviour
     {
         [Header("Settings")]
@@ -27,13 +27,39 @@ namespace GanhHangRong.NPC
         private float drinkDuration;
         private bool isServed = false;
         
-        private NPCAppearance appearance;
+        // UI
+        private GameObject speechBubble;
+        private TextMeshPro bubbleText;
 
         public NPCState CurrentState => currentState;
 
         private void Awake()
         {
-            appearance = GetComponent<NPCAppearance>();
+            // Create speech bubble
+            speechBubble = new GameObject("SpeechBubble");
+            speechBubble.transform.SetParent(transform);
+            speechBubble.transform.localPosition = new Vector3(0, 2.2f, 0);
+            
+            bubbleText = speechBubble.AddComponent<TextMeshPro>();
+            bubbleText.fontSize = 4;
+            bubbleText.alignment = TextAlignmentOptions.Center;
+            bubbleText.color = Color.black;
+            
+            // Thêm background trắng cho text (đơn giản bằng SpriteRenderer)
+            GameObject bgObj = new GameObject("Background");
+            bgObj.transform.SetParent(speechBubble.transform);
+            bgObj.transform.localPosition = new Vector3(0, 0, 0.1f);
+            var bgSr = bgObj.AddComponent<SpriteRenderer>();
+            
+            // Generate a simple white texture for the background
+            Texture2D tex = new Texture2D(1, 1);
+            tex.SetPixel(0, 0, Color.white);
+            tex.Apply();
+            Sprite sprite = Sprite.Create(tex, new Rect(0, 0, 1, 1), new Vector2(0.5f, 0.5f));
+            bgSr.sprite = sprite;
+            bgObj.transform.localScale = new Vector3(2f, 1f, 1f);
+
+            speechBubble.SetActive(false);
         }
 
         public void Initialize(NPCProfile profile, CustomerSeat seat, Transform exit, float walkSpd)
@@ -46,8 +72,12 @@ namespace GanhHangRong.NPC
             this.maxWaitTime = Random.Range(profile.minPatience, profile.maxPatience);
             this.drinkDuration = Random.Range(profile.minDrinkTime, profile.maxDrinkTime);
             
-            if (appearance != null)
-                appearance.ApplyProfile(profile);
+            // Gọi factory tạo model
+            var factory = FindAnyObjectByType<NPCVisualFactory>();
+            if (factory != null)
+            {
+                factory.CreateNPCVisual(profile.npcType, transform);
+            }
                 
             ChangeState(NPCState.WalkingIn);
         }
@@ -69,15 +99,23 @@ namespace GanhHangRong.NPC
                     break;
                     
                 case NPCState.Ordering:
-                    // Hiện bong bóng chat (tạm thời bỏ qua, chuyển luôn sang chờ)
+                    ShowSpeechBubble("Trà Đá!");
                     EventManager.TriggerCustomerArrived(profile.npcType);
                     ChangeState(NPCState.Waiting);
                     break;
                     
                 case NPCState.Waiting:
                     waitTimer += Time.deltaTime;
+                    
+                    // Hiện cảnh báo nếu chờ quá lâu
+                    if (!isServed && waitTimer > maxWaitTime * 0.7f)
+                    {
+                        ShowSpeechBubble("Nhanh lên!\n(!!)", Color.red);
+                    }
+
                     if (isServed)
                     {
+                        HideSpeechBubble();
                         ChangeState(NPCState.Drinking);
                         EventManager.TriggerCustomerServed(profile.npcType);
                     }
@@ -105,7 +143,12 @@ namespace GanhHangRong.NPC
                     break;
                     
                 case NPCState.LeavingHappy:
+                    ShowSpeechBubble("Ngon!", Color.blue);
+                    ChangeState(NPCState.WalkingOut);
+                    break;
+                    
                 case NPCState.LeavingSad:
+                    ShowSpeechBubble("Tệ quá!", Color.red);
                     ChangeState(NPCState.WalkingOut);
                     break;
                     
@@ -168,6 +211,22 @@ namespace GanhHangRong.NPC
                 playerStats.AddMoney(total);
                 playerStats.RecordCustomerServed();
             }
+        }
+
+        private void ShowSpeechBubble(string text, Color? textColor = null)
+        {
+            if (speechBubble != null)
+            {
+                speechBubble.SetActive(true);
+                bubbleText.text = text;
+                bubbleText.color = textColor ?? Color.black;
+            }
+        }
+
+        private void HideSpeechBubble()
+        {
+            if (speechBubble != null)
+                speechBubble.SetActive(false);
         }
     }
 }

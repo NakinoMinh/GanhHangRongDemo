@@ -4,13 +4,14 @@ using GanhHangRong.Core;
 namespace GanhHangRong.Player
 {
     /// <summary>
-    /// Thống kê nhân vật — tiền, mệt mỏi, mức đá.
+    /// Thống kê nhân vật — tiền, mệt mỏi, stress, mức đá, kho đồ.
     /// </summary>
     public class PlayerStats : MonoBehaviour
     {
         [Header("Thống Kê")]
         [SerializeField] private int money = Constants.STARTING_MONEY;
         [SerializeField] private float fatigue = 0f;
+        [SerializeField] private float stress = 0f;
         [SerializeField] private float iceLevel = Constants.ICE_MAX;
 
         [Header("Kho Đồ")]
@@ -21,6 +22,7 @@ namespace GanhHangRong.Player
         // Properties
         public int Money => money;
         public float Fatigue => fatigue;
+        public float Stress => stress;
         public float IceLevel => iceLevel;
         public int TeaSupply => teaSupply;
         public int SugarSupply => sugarSupply;
@@ -35,32 +37,34 @@ namespace GanhHangRong.Player
         private void OnEnable()
         {
             EventManager.OnNewDay += ResetDailyStats;
+            EventManager.OnCustomerLeftSad += OnCustomerSad;
         }
 
         private void OnDisable()
         {
             EventManager.OnNewDay -= ResetDailyStats;
+            EventManager.OnCustomerLeftSad -= OnCustomerSad;
         }
 
         private void Update()
         {
             if (!GameManager.Instance.IsPlaying) return;
 
-            // Mệt mỏi tăng dần
             var controller = GetComponent<PlayerController2D>();
             if (controller != null && controller.CurrentState == PlayerState.Sitting)
             {
+                // Hồi phục khi ngồi nghỉ
                 ModifyFatigue(-Constants.PLAYER_FATIGUE_REST_RATE * Time.deltaTime / 60f);
+                ModifyStress(-Constants.PLAYER_STRESS_REST_RATE * Time.deltaTime / 60f);
             }
             else
             {
+                // Mệt mỏi tăng dần
                 ModifyFatigue(Constants.PLAYER_FATIGUE_RATE * Time.deltaTime / 60f);
             }
 
             // Đá tan dần
             float meltRate = Constants.ICE_MELT_RATE;
-            // Mưa làm đá tan chậm hơn (lạnh hơn)
-            // WeatherManager sẽ gọi SetIceMeltModifier nếu cần
             ModifyIceLevel(-meltRate * Time.deltaTime / 60f);
         }
 
@@ -95,6 +99,22 @@ namespace GanhHangRong.Player
             fatigue = Mathf.Clamp(fatigue + amount, 0f, Constants.PLAYER_FATIGUE_MAX);
             if (!Mathf.Approximately(prev, fatigue))
                 EventManager.TriggerFatigueChanged(fatigue);
+        }
+
+        // ═══════════════════════════════════════════
+        // STRESS
+        // ═══════════════════════════════════════════
+        public void ModifyStress(float amount)
+        {
+            float prev = stress;
+            stress = Mathf.Clamp(stress + amount, 0f, Constants.PLAYER_STRESS_MAX);
+            if (!Mathf.Approximately(prev, stress))
+                EventManager.TriggerStressChanged(stress);
+        }
+
+        private void OnCustomerSad(NPCType type)
+        {
+            ModifyStress(Constants.PLAYER_STRESS_RATE_SAD_CUSTOMER);
         }
 
         // ═══════════════════════════════════════════
@@ -139,6 +159,7 @@ namespace GanhHangRong.Player
         public void RecordCustomerServed()
         {
             customersServedToday++;
+            ModifyStress(Constants.PLAYER_STRESS_RATE_SERVE); // Giảm stress khi phục vụ thành công
         }
 
         private void ResetDailyStats()

@@ -10,13 +10,14 @@ namespace GanhHangRong.Weather
         [SerializeField] private Vector2 baseWindDirection = new Vector2(-1f, 0f); // Mặc định thổi từ phải qua trái (từ biển vào bờ)
         [SerializeField] private float windStrengthMultiplier = 5f;
         
-        private ParticleSystem.ForceOverLifetimeModule forceModule;
+        private ParticleSystem targetParticles;
 
         public void Initialize(ParticleSystem rainParticles)
         {
             if (rainParticles != null)
             {
-                forceModule = rainParticles.forceOverLifetime;
+                targetParticles = rainParticles;
+                var forceModule = targetParticles.forceOverLifetime;
                 forceModule.enabled = true;
             }
         }
@@ -27,9 +28,12 @@ namespace GanhHangRong.Weather
             {
                 float strength = WeatherManager.Instance.CurrentPreset.windStrength;
                 
-                // Cập nhật lực gió lên hạt mưa
-                forceModule.x = baseWindDirection.x * strength * windStrengthMultiplier;
-                forceModule.y = baseWindDirection.y * strength * windStrengthMultiplier;
+                if (targetParticles != null)
+                {
+                    var forceModule = targetParticles.forceOverLifetime;
+                    forceModule.x = baseWindDirection.x * strength * windStrengthMultiplier;
+                    forceModule.y = baseWindDirection.y * strength * windStrengthMultiplier;
+                }
                 
                 // Truyền tham số gió vào shader (nước, lá cây, v.v.)
                 Shader.SetGlobalVector("_WindParams", new Vector4(baseWindDirection.x * strength, 0, 0, 0));

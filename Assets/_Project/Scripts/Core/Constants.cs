@@ -18,6 +18,12 @@ namespace GanhHangRong.Core
         public const float PLAYER_FATIGUE_REST_RATE = 2f;       // hồi phục khi ngồi/phút
         public const float PLAYER_SPEED_FATIGUE_PENALTY = 0.3f; // giảm tốc khi mệt tối đa
 
+        // STRESS
+        public const float PLAYER_STRESS_MAX = 100f;
+        public const float PLAYER_STRESS_RATE_SAD_CUSTOMER = 15f;   // Stress tăng khi khách bỏ đi
+        public const float PLAYER_STRESS_RATE_SERVE = -5f;          // Stress giảm khi phục vụ thành công
+        public const float PLAYER_STRESS_REST_RATE = 3f;            // Stress giảm khi ngồi nghỉ/phút
+
         // ═══════════════════════════════════════════
         // CAMERA
         // ═══════════════════════════════════════════

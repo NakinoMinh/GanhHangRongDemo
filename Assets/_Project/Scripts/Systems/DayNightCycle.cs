@@ -11,11 +11,18 @@ namespace GanhHangRong.Economy
         [Header("Settings")]
         [SerializeField] private float timeScaleMultiplier = Constants.GAME_MINUTES_PER_REAL_SECOND;
         
-        private float currentHour = Constants.DAY_START_HOUR;
-        private TimeOfDay currentTimeOfDay = TimeOfDay.EarlyMorning;
+        private float currentHour = 17f; // Mặc định bắt đầu lúc 17:00 (chuẩn bị bán)
+        private TimeOfDay currentTimeOfDay = TimeOfDay.Evening;
 
         public float CurrentHour => currentHour;
         public TimeOfDay CurrentTimeOfDay => currentTimeOfDay;
+
+        private void Start()
+        {
+            // Trigger ngay khi bắt đầu
+            EventManager.TriggerHourChanged(currentHour);
+            UpdateTimeOfDay();
+        }
 
         private void Update()
         {
@@ -52,6 +59,13 @@ namespace GanhHangRong.Economy
                 currentTimeOfDay = newTime;
                 EventManager.TriggerTimeOfDayChanged(currentTimeOfDay);
             }
+        }
+
+        public void SkipToHour(float targetHour)
+        {
+            currentHour = targetHour;
+            EventManager.TriggerHourChanged(currentHour);
+            UpdateTimeOfDay();
         }
     }
 }
